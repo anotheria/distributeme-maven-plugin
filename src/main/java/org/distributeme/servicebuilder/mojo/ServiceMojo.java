@@ -44,7 +44,7 @@ public class ServiceMojo extends AbstractMojo {
 	private String binDirectoryName = "bin";
 	private String libDirectoryName = "lib";
 	private String confDirectoryName = "conf";
-	private String logDirectoryName = "log";
+	private String logDirectoryName = "logs";
 	private String locallibDirectoryName = "locallib";
 	@Parameter
 	private String pathToEnvironmentSh;
@@ -79,7 +79,7 @@ public class ServiceMojo extends AbstractMojo {
 		Type listType = new TypeToken<List<ServiceEntry>>() {}.getType();
 		ArrayList<ServiceEntry> list = gson.fromJson(jsonArr, listType);
 		try{
-			generateCommonPart();
+			generateCommonPart(list);
 		}catch(IOException ex){
 			throw new MojoExecutionException("Can't create common directories", ex);
 		}
@@ -103,14 +103,14 @@ public class ServiceMojo extends AbstractMojo {
 		this.definitionsFile = definitionsFile;
 	}
 
-	protected void generateCommonPart() throws IOException{
+	protected void generateCommonPart(List<ServiceEntry> entries) throws IOException{
 		String target = "target/"+outputDirectory+"/";
 
 		File bin = new File(target + binDirectoryName); bin.mkdirs();
 		File lib = new File(target + libDirectoryName); lib.mkdirs();
 		File conf = new File(target + confDirectoryName); conf.mkdirs();
 
-		writeOutGenericScripts(bin);
+		writeOutGenericScripts(bin, entries);
 
 		//link to environment sh.
 		Path envLinkTarget = Paths.get(pathToEnvironmentSh);
@@ -155,8 +155,11 @@ public class ServiceMojo extends AbstractMojo {
 	protected void generateServiceStartScripts(File targetDirectory, ServiceEntry serviceEntry) throws IOException{
 		//first write out the service definition file.
 		FileOutputStream serviceDefinitionFile = new FileOutputStream(targetDirectory+"/service.sh");
-		serviceDefinitionFile.write(("export TARGET_PID="+serviceEntry.getName()+".pid").getBytes());
-		serviceDefinitionFile.write(("export TARGET_CLASS="+serviceEntry.getStartClass()).getBytes());
+		serviceDefinitionFile.write("#This is service definition file, it is sourced from the start script.\n".getBytes());
+		serviceDefinitionFile.write(("#This service definition is created from services.json with entry: "+serviceEntry+".\n").getBytes());
+		serviceDefinitionFile.write(("export TARGET_PID="+serviceEntry.getName()+".pid\n").getBytes());
+		serviceDefinitionFile.write(("export TARGET_CLASS="+serviceEntry.getStartClass()+"\n").getBytes());
+		serviceDefinitionFile.write(("export RMI_PORT="+serviceEntry.getRmiPort()+"\n").getBytes());
 		//export LOCAL_RMI_PORT=9405
 		serviceDefinitionFile.close();
 
@@ -166,9 +169,42 @@ public class ServiceMojo extends AbstractMojo {
 
 	}
 
-	protected void writeOutGenericScripts(File targetDirectory)throws IOException{
+	protected void writeOutGenericScripts(File targetDirectory, List<ServiceEntry> serviceEntries) throws IOException{
 		writeOutScript(targetDirectory, "start.sh");
 		writeOutScript(targetDirectory, "stop.sh");
+
+		//create start all script
+		String serviceList = "";
+		for (ServiceEntry entry : serviceEntries){
+			if (entry.isAutostart()){
+				serviceList+= entry.getName()+" ";
+			}
+		}
+
+		FileOutputStream startAll = new FileOutputStream(targetDirectory.getAbsolutePath()+"/"+"start_all.sh");
+		startAll.write("#!/usr/bin/env bash\n".getBytes());
+		startAll.write(("SERVICES=\""+serviceList+"\"\n").getBytes());
+		startAll.write(("for i in $SERVICES; do\n").getBytes());
+		startAll.write(("\techo starting service $i\n").getBytes());
+		startAll.write(("\tcd $i\n").getBytes());
+		startAll.write(("\tbin/start_service.sh\n").getBytes());
+		startAll.write(("\tcd ..\n").getBytes());
+		startAll.write(("done\n").getBytes());
+		startAll.close();
+
+		FileOutputStream stopAll = new FileOutputStream(targetDirectory.getAbsolutePath()+"/"+"stop_all.sh");
+		stopAll.write("#!/usr/bin/env bash\n".getBytes());
+		stopAll.write(("SERVICES=\""+serviceList+"\"\n").getBytes());
+		stopAll.write(("for i in $SERVICES; do\n").getBytes());
+		stopAll.write(("\techo stoping service $i\n").getBytes());
+		stopAll.write(("\tcd $i\n").getBytes());
+		stopAll.write(("\tbin/stop_service.sh\n").getBytes());
+		stopAll.write(("\tcd ..\n").getBytes());
+		stopAll.write(("done\n").getBytes());
+		stopAll.close();
+
+
+
 	}
 
 	protected void writeOutScript(File targetDirectory, String filename) throws IOException{

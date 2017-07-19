@@ -181,7 +181,8 @@ public class ServiceMojo extends AbstractMojo {
 			}
 		}
 
-		FileOutputStream startAll = new FileOutputStream(targetDirectory.getAbsolutePath()+"/"+"start_all.sh");
+		File startAllFile = new File(targetDirectory.getAbsolutePath()+"/"+"start_all.sh");
+		FileOutputStream startAll = new FileOutputStream(startAllFile);
 		startAll.write("#!/usr/bin/env bash\n".getBytes());
 		startAll.write(("SERVICES=\""+serviceList+"\"\n").getBytes());
 		startAll.write(("for i in $SERVICES; do\n").getBytes());
@@ -191,8 +192,10 @@ public class ServiceMojo extends AbstractMojo {
 		startAll.write(("\tcd ..\n").getBytes());
 		startAll.write(("done\n").getBytes());
 		startAll.close();
+		startAllFile.setExecutable(true);
 
-		FileOutputStream stopAll = new FileOutputStream(targetDirectory.getAbsolutePath()+"/"+"stop_all.sh");
+		File stopAllFile = new File(targetDirectory.getAbsolutePath()+"/"+"stop_all.sh");
+		FileOutputStream stopAll = new FileOutputStream(stopAllFile);
 		stopAll.write("#!/usr/bin/env bash\n".getBytes());
 		stopAll.write(("SERVICES=\""+serviceList+"\"\n").getBytes());
 		stopAll.write(("for i in $SERVICES; do\n").getBytes());
@@ -202,6 +205,7 @@ public class ServiceMojo extends AbstractMojo {
 		stopAll.write(("\tcd ..\n").getBytes());
 		stopAll.write(("done\n").getBytes());
 		stopAll.close();
+		stopAllFile.setExecutable(true);
 
 
 
@@ -209,10 +213,12 @@ public class ServiceMojo extends AbstractMojo {
 
 	protected void writeOutScript(File targetDirectory, String filename) throws IOException{
 		InputStream fIn = ServiceMojo.class.getResourceAsStream("/"+filename);
-		FileOutputStream fOut = new FileOutputStream(targetDirectory.getAbsolutePath()+"/"+filename);
+		File file = new File(targetDirectory.getAbsolutePath()+"/"+filename);
+		FileOutputStream fOut = new FileOutputStream(file);
 		int c = -1;
 		while ( (c = fIn.read()) != -1 )
 			fOut.write(c);
 		fOut.close();
+		file.setExecutable(true);
 	}
 }

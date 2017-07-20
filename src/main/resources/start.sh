@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-#echo localRmiPort: $LOCAL_RMI_PORT
 #echo jar: $TARGET_JAR
 echo pid: $TARGET_PID
 echo startClass: $TARGET_CLASS
+export LOCAL_RMI_PORT=$RMI_PORT
+echo localRmiPort: $LOCAL_RMI_PORT
 source ../environment.sh
 echo Environment: $CONFIGUREME_ENVIRONMENT
 
@@ -16,6 +17,16 @@ for i in $( ls lib/); do
 	CLASSPATH="$CLASSPATH:lib/$i"
 done
 
+export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT"
+
+if [[ ($LOCAL_RMI_PORT -eq "0") ]]; then
+    echo "no port set, using random port"
+else
+    echo "setting to port $LOCAL_RMI_PORT"
+	PROCESS_PROPERTIES="$PROCESS_PROPERTIES -DlocalRmiRegistryPort=$LOCAL_RMI_PORT"
+fi
+
 #echo CLASSPATH=$CLASSPATH
 #nohup java -Xmx256M -Xms64M -jar -DlocalRmiRegistryPort=$LOCAL_RMI_PORT -Dloader.path="config/" -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $TARGET_JAR >logs/stdout 2>logs/stderr & echo $! > $TARGET_PID
-nohup java -Xmx256M -Xms64M -cp $CLASSPATH -Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $TARGET_JAR >logs/stdout 2>logs/stderr $TARGET_CLASS &
+echo Properties: $PROCESS_PROPERTIES
+nohup java -Xmx256M -Xms64M -cp $CLASSPATH $PROCESS_PROPERTIES $TARGET_JAR >logs/stdout 2>logs/stderr $TARGET_CLASS &

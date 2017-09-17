@@ -23,7 +23,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO comment this class
@@ -49,6 +52,8 @@ public class ServiceMojo extends AbstractMojo {
 	@Parameter
 	private String pathToEnvironmentSh;
 
+	private HashMap<String,List<String>> knownProfiles = new HashMap<>();
+
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -73,16 +78,20 @@ public class ServiceMojo extends AbstractMojo {
 
 		JsonParser jsonParser = new JsonParser();
 		JsonObject jo = (JsonObject)jsonParser.parse(new String(fileData));
+
+		//read profiles
+		JsonArray profiles = jo.getAsJsonArray("profiles");
+		for (int i=0; i<profiles.size(); i++){
+			knownProfiles.put(profiles.get(i).getAsJsonObject().get("name").getAsString(), new LinkedList<String>());
+		}
+		System.out.println("Known profiles: "+knownProfiles);
+
+
 		JsonArray jsonArr = jo.getAsJsonArray("services");
 
 		Gson gson = new GsonBuilder().create();
 		Type listType = new TypeToken<List<ServiceEntry>>() {}.getType();
 		ArrayList<ServiceEntry> list = gson.fromJson(jsonArr, listType);
-		try{
-			generateCommonPart(list);
-		}catch(IOException ex){
-			throw new MojoExecutionException("Can't create common directories", ex);
-		}
 
 		for (ServiceEntry entry : list){
 			try{
@@ -91,6 +100,14 @@ public class ServiceMojo extends AbstractMojo {
 				throw new MojoExecutionException("Can't create service "+entry.getName(), ex);
 			}
 		}
+
+		//generate generic start script for all services.
+		try{
+			generateCommonPart(list);
+		}catch(IOException ex){
+			throw new MojoExecutionException("Can't create common directories", ex);
+		}
+
 
 
 	}
@@ -110,8 +127,6 @@ public class ServiceMojo extends AbstractMojo {
 		File lib = new File(target + libDirectoryName); lib.mkdirs();
 		File conf = new File(target + confDirectoryName); conf.mkdirs();
 
-		writeOutGenericScripts(bin, entries);
-
 		//link to environment sh.
 		Path envLinkTarget = Paths.get(pathToEnvironmentSh);
 		Path envLinksource = Paths.get(target+"environment.sh");
@@ -121,10 +136,22 @@ public class ServiceMojo extends AbstractMojo {
 			getLog().info("symlink "+envLinksource+" already exists, skipping");
 		}
 
+		writeOutGenericScripts(bin, entries);
+
 
 	}
 
 	protected void generateService(ServiceEntry entry) throws IOException{
+
+		//add service to the corresponding profile service list.
+		List<String> serviceProfiles = entry.getProfiles();
+		for (String p : serviceProfiles){
+			List<String> servicesForProfile = knownProfiles.get(p);
+			if (serviceProfiles == null)
+				throw new RuntimeException("Can't find profile '"+p+"' for service '"+entry.getName()+"'");
+			servicesForProfile.add(entry.getName());
+		}
+
 		String target = "target/"+outputDirectory+"/"+entry.getName()+"/";
 		String common = "../";
 
@@ -160,6 +187,8 @@ public class ServiceMojo extends AbstractMojo {
 		serviceDefinitionFile.write(("export TARGET_PID="+serviceEntry.getName()+".pid\n").getBytes());
 		serviceDefinitionFile.write(("export TARGET_CLASS="+serviceEntry.getStartClass()+"\n").getBytes());
 		serviceDefinitionFile.write(("export RMI_PORT="+serviceEntry.getRmiPort()+"\n").getBytes());
+		serviceDefinitionFile.write(("export JVM_OPTIONS="+(serviceEntry.getJvmOptions()!=null ? serviceEntry.getJvmOptions() : "")+"\n").getBytes());
+		serviceDefinitionFile.write(("## profiles for this service are: "+serviceEntry.getProfiles()+"\n").getBytes());
 		//export LOCAL_RMI_PORT=9405
 		serviceDefinitionFile.close();
 
@@ -176,39 +205,72 @@ public class ServiceMojo extends AbstractMojo {
 		//create start all script
 		String serviceList = "";
 		for (ServiceEntry entry : serviceEntries){
-			if (entry.isAutostart()){
-				serviceList+= entry.getName()+" ";
-			}
+			//if (entry.isAutostart()){
+			//	serviceList+= entry.getName()+" ";
+			//}
 		}
 
 		File startAllFile = new File(targetDirectory.getAbsolutePath()+"/"+"start_all.sh");
 		FileOutputStream startAll = new FileOutputStream(startAllFile);
-		startAll.write("#!/usr/bin/env bash\n".getBytes());
-		startAll.write(("SERVICES=\""+serviceList+"\"\n").getBytes());
-		startAll.write(("for i in $SERVICES; do\n").getBytes());
-		startAll.write(("\techo starting service $i\n").getBytes());
-		startAll.write(("\tcd $i\n").getBytes());
-		startAll.write(("\tbin/start_service.sh\n").getBytes());
-		startAll.write(("\tcd ..\n").getBytes());
-		startAll.write(("done\n").getBytes());
+		writeLine(startAll, "#!/usr/bin/env bash");
+		writeLine(startAll ,"source environment.sh");
+		writeLine(startAll ,"echo current profile: $DISTRIBUTEME_PROFILE");
+		writeLine(startAll ,"profile_found=\"false\"");
+
+		//generate service definition for every profile.
+		for (Map.Entry<String, List<String>> entries : knownProfiles.entrySet()){
+			String serviceListForProfile = "";
+			for (String s : entries.getValue()){
+				serviceListForProfile += s + " ";
+			}
+			String profileNameForScript = "SERVICES_"+entries.getKey();
+			writeLine(startAll, profileNameForScript+"=\""+serviceListForProfile+"\"");
+		}
+		writeLine(startAll, "");
+
+		//generate profile name check for every profile.
+		for (Map.Entry<String, List<String>> entries : knownProfiles.entrySet()){
+			String profileNameForScript = "SERVICES_"+entries.getKey();
+			writeLine(startAll, "if [ \""+entries.getKey()+"\" = \"$DISTRIBUTEME_PROFILE\" ]; then");
+			writeLine(startAll, "  profile_found=\"true\"");
+			writeLine(startAll, "  SERVICES=$"+profileNameForScript);
+			writeLine(startAll, "fi");
+		}
+		writeLine(startAll, "");
+
+		writeLine(startAll, "if [ $profile_found = \"false\" ]; then");
+		writeLine(startAll, "  echo profile $DISTRIBUTEME_PROFILE not found!");
+		writeLine(startAll, "else");
+		writeLine(startAll, "  echo starting services $SERVICES");
+		writeLine(startAll, "fi");
+
+		writeLine(startAll, "");
+		writeLine(startAll, "for i in $SERVICES; do");
+		writeLine(startAll, "\techo starting service $i");
+		writeLine(startAll, "\tcd $i");
+		writeLine(startAll, "\tbin/start_service.sh");
+		writeLine(startAll, "\tcd ..");
+		writeLine(startAll, "done");
 		startAll.close();
 		startAllFile.setExecutable(true);
 
 		File stopAllFile = new File(targetDirectory.getAbsolutePath()+"/"+"stop_all.sh");
 		FileOutputStream stopAll = new FileOutputStream(stopAllFile);
-		stopAll.write("#!/usr/bin/env bash\n".getBytes());
-		stopAll.write(("SERVICES=\""+serviceList+"\"\n").getBytes());
-		stopAll.write(("for i in $SERVICES; do\n").getBytes());
-		stopAll.write(("\techo stoping service $i\n").getBytes());
-		stopAll.write(("\tcd $i\n").getBytes());
-		stopAll.write(("\tbin/stop_service.sh\n").getBytes());
-		stopAll.write(("\tcd ..\n").getBytes());
-		stopAll.write(("done\n").getBytes());
+		writeLine(stopAll,"#!/usr/bin/env bash");
+		writeLine(stopAll,"SERVICES=\""+serviceList+"\"");
+		writeLine(stopAll,"for i in $SERVICES; do");
+		writeLine(stopAll,"\techo stoping service $i");
+		writeLine(stopAll,"\tcd $i");
+		writeLine(stopAll,"\tbin/stop_service.sh");
+		writeLine(stopAll,"\tcd ..");
+		writeLine(stopAll,"done");
 		stopAll.close();
 		stopAllFile.setExecutable(true);
 
+	}
 
-
+	private void writeLine(FileOutputStream fOut, String line) throws IOException{
+		fOut.write( (line+"\n").getBytes());
 	}
 
 	protected void writeOutScript(File targetDirectory, String filename) throws IOException{

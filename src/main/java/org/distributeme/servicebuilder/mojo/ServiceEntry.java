@@ -1,5 +1,8 @@
 package org.distributeme.servicebuilder.mojo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Represents a single service @ Runtime.
  *
@@ -21,7 +24,12 @@ public class ServiceEntry {
 	 */
 	private int rmiPort;
 
-	private boolean autostart;
+	/**
+	 * Additional JVM options.
+	 */
+	private String jvmOptions;
+
+	private List<String> profiles = new ArrayList<>();
 
 
 	public String getName() {
@@ -48,12 +56,20 @@ public class ServiceEntry {
 		this.rmiPort = rmiPort;
 	}
 
-	public boolean isAutostart() {
-		return autostart;
+	public String getJvmOptions() {
+		return jvmOptions;
 	}
 
-	public void setAutostart(boolean autostart) {
-		this.autostart = autostart;
+	public List<String> getProfiles() {
+		return profiles;
+	}
+
+	public void setProfiles(List<String> profiles) {
+		this.profiles = profiles;
+	}
+
+	public void setJvmOptions(String jvmOptions) {
+		this.jvmOptions = jvmOptions;
 	}
 
 	@Override
@@ -62,7 +78,8 @@ public class ServiceEntry {
 				"name='" + name + '\'' +
 				", startClass='" + startClass + '\'' +
 				", rmiPort=" + rmiPort +
-				", autostart=" + autostart +
+				", jvmOptions="+ jvmOptions +
+				", profiles="+ profiles +
 				'}';
 	}
 }

@@ -182,13 +182,13 @@ public class ServiceMojo extends AbstractMojo {
 	protected void generateServiceStartScripts(File targetDirectory, ServiceEntry serviceEntry) throws IOException{
 		//first write out the service definition file.
 		FileOutputStream serviceDefinitionFile = new FileOutputStream(targetDirectory+"/service.sh");
-		serviceDefinitionFile.write("#This is service definition file, it is sourced from the start script.\n".getBytes());
-		serviceDefinitionFile.write(("#This service definition is created from services.json with entry: "+serviceEntry+".\n").getBytes());
-		serviceDefinitionFile.write(("export TARGET_PID="+serviceEntry.getName()+".pid\n").getBytes());
-		serviceDefinitionFile.write(("export TARGET_CLASS="+serviceEntry.getStartClass()+"\n").getBytes());
-		serviceDefinitionFile.write(("export RMI_PORT="+serviceEntry.getRmiPort()+"\n").getBytes());
-		serviceDefinitionFile.write(("export JVM_OPTIONS="+(serviceEntry.getJvmOptions()!=null ? serviceEntry.getJvmOptions() : "")+"\n").getBytes());
-		serviceDefinitionFile.write(("## profiles for this service are: "+serviceEntry.getProfiles()+"\n").getBytes());
+		writeLine(serviceDefinitionFile, "#This is service definition file, it is sourced from the start script.");
+		writeLine(serviceDefinitionFile,"#This service definition is created from services.json with entry: "+serviceEntry+".");
+		writeLine(serviceDefinitionFile,"export TARGET_PID="+serviceEntry.getName()+".pid");
+		writeLine(serviceDefinitionFile,"export TARGET_CLASS="+serviceEntry.getStartClass());
+		writeLine(serviceDefinitionFile,"export RMI_PORT="+serviceEntry.getRmiPort());
+		writeLine(serviceDefinitionFile,"export JVM_OPTIONS=\""+(serviceEntry.getJvmOptions()!=null ? serviceEntry.getJvmOptions() : "none")+"\"");
+		writeLine(serviceDefinitionFile,"## profiles for this service are: "+serviceEntry.getProfiles());
 		//export LOCAL_RMI_PORT=9405
 		serviceDefinitionFile.close();
 

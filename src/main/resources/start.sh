@@ -17,7 +17,12 @@ for i in $( ls lib/); do
 	CLASSPATH="$CLASSPATH:lib/$i"
 done
 
-export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT"
+if [ "$JVM_OPTIONS" = "none" ]; then
+    echo "no JVM Options set, using standard memory options "
+    JVM_OPTIONS="-Xmx256M -Xms64M"
+fi
+
+export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $JVM_OPTIONS"
 
 if [[ ($LOCAL_RMI_PORT -eq "0") ]]; then
     echo "no port set, using random port"
@@ -29,4 +34,4 @@ fi
 #echo CLASSPATH=$CLASSPATH
 #nohup java -Xmx256M -Xms64M -jar -DlocalRmiRegistryPort=$LOCAL_RMI_PORT -Dloader.path="config/" -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $TARGET_JAR >logs/stdout 2>logs/stderr & echo $! > $TARGET_PID
 echo Properties: $PROCESS_PROPERTIES
-nohup java -Xmx256M -Xms64M -cp $CLASSPATH $PROCESS_PROPERTIES $TARGET_JAR >logs/stdout 2>logs/stderr $TARGET_CLASS &
+nohup java -cp $CLASSPATH $PROCESS_PROPERTIES $TARGET_JAR >logs/stdout 2>logs/stderr $TARGET_CLASS &

@@ -23,6 +23,7 @@ if [ "$JVM_OPTIONS" = "none" ]; then
 fi
 
 export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $JVM_OPTIONS"
+export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+DisableExplicitGC -verbose:GC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:logs/gc.log"
 
 if [[ ($LOCAL_RMI_PORT -eq "0") ]]; then
     echo "no port set, using random port"

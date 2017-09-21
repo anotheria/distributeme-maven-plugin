@@ -257,7 +257,37 @@ public class ServiceMojo extends AbstractMojo {
 		File stopAllFile = new File(targetDirectory.getAbsolutePath()+"/"+"stop_all.sh");
 		FileOutputStream stopAll = new FileOutputStream(stopAllFile);
 		writeLine(stopAll,"#!/usr/bin/env bash");
-		writeLine(stopAll,"SERVICES=\""+serviceList+"\"");
+		writeLine(stopAll ,"source environment.sh");
+		writeLine(stopAll ,"echo current profile: $DISTRIBUTEME_PROFILE");
+		writeLine(stopAll ,"profile_found=\"false\"");
+
+		//generate service definition for every profile.
+		for (Map.Entry<String, List<String>> entries : knownProfiles.entrySet()){
+			String serviceListForProfile = "";
+			for (String s : entries.getValue()){
+				serviceListForProfile += s + " ";
+			}
+			String profileNameForScript = "SERVICES_"+entries.getKey();
+			writeLine(stopAll, profileNameForScript+"=\""+serviceListForProfile+"\"");
+		}
+		writeLine(stopAll, "");
+
+		//generate profile name check for every profile.
+		for (Map.Entry<String, List<String>> entries : knownProfiles.entrySet()){
+			String profileNameForScript = "SERVICES_"+entries.getKey();
+			writeLine(stopAll, "if [ \""+entries.getKey()+"\" = \"$DISTRIBUTEME_PROFILE\" ]; then");
+			writeLine(stopAll, "  profile_found=\"true\"");
+			writeLine(stopAll, "  SERVICES=$"+profileNameForScript);
+			writeLine(stopAll, "fi");
+		}
+		writeLine(stopAll, "");
+
+		writeLine(stopAll, "if [ $profile_found = \"false\" ]; then");
+		writeLine(stopAll, "  echo profile $DISTRIBUTEME_PROFILE not found!");
+		writeLine(stopAll, "else");
+		writeLine(stopAll, "  echo stoping services $SERVICES");
+		writeLine(stopAll, "fi");
+
 		writeLine(stopAll,"for i in $SERVICES; do");
 		writeLine(stopAll,"\techo stoping service $i");
 		writeLine(stopAll,"\tcd $i");

@@ -49,6 +49,7 @@ public class ServiceMojo extends AbstractMojo {
 	private String confDirectoryName = "conf";
 	private String logDirectoryName = "logs";
 	private String locallibDirectoryName = "locallib";
+	private String localconfDirectoryName = "localconf";
 	@Parameter
 	private String pathToEnvironmentSh;
 
@@ -84,7 +85,6 @@ public class ServiceMojo extends AbstractMojo {
 		for (int i=0; i<profiles.size(); i++){
 			knownProfiles.put(profiles.get(i).getAsJsonObject().get("name").getAsString(), new LinkedList<String>());
 		}
-		System.out.println("Known profiles: "+knownProfiles);
 
 
 		JsonArray jsonArr = jo.getAsJsonArray("services");
@@ -157,6 +157,7 @@ public class ServiceMojo extends AbstractMojo {
 
 		File log = new File(target + logDirectoryName); log.mkdirs();
 		File localLib = new File(target + locallibDirectoryName); localLib.mkdirs();
+		File localConf = new File(target + localconfDirectoryName); localConf.mkdirs();
 		File bin = new File(target + binDirectoryName); bin.mkdirs();
 
 		Path libLinkTarget = Paths.get(common+libDirectoryName);
@@ -184,6 +185,7 @@ public class ServiceMojo extends AbstractMojo {
 		FileOutputStream serviceDefinitionFile = new FileOutputStream(targetDirectory+"/service.sh");
 		writeLine(serviceDefinitionFile, "#This is service definition file, it is sourced from the start script.");
 		writeLine(serviceDefinitionFile,"#This service definition is created from services.json with entry: "+serviceEntry+".");
+		writeLine(serviceDefinitionFile,"export SERVICE_NAME="+serviceEntry.getName());
 		writeLine(serviceDefinitionFile,"export TARGET_PID="+serviceEntry.getName()+".pid");
 		writeLine(serviceDefinitionFile,"export TARGET_CLASS="+serviceEntry.getStartClass());
 		writeLine(serviceDefinitionFile,"export RMI_PORT="+serviceEntry.getRmiPort());

@@ -7,8 +7,8 @@ echo localRmiPort: $LOCAL_RMI_PORT
 source ../environment.sh
 echo Environment: $CONFIGUREME_ENVIRONMENT
 
-#create classpath
-CLASSPATH="conf"
+#create classpath, first localconf, then service specific conf, then conf, after this add all jars in locallib, then lib.
+CLASSPATH="localconf:conf/$SERVICE_NAME:conf"
 for i in $( ls locallib/); do
 	CLASSPATH="$CLASSPATH:locallib/$i"
 done
@@ -23,7 +23,10 @@ if [ "$JVM_OPTIONS" = "none" ]; then
 fi
 
 export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $JVM_OPTIONS"
-export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+DisableExplicitGC -verbose:GC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:logs/gc.log"
+export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+DisableExplicitGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:logs/gc.log"
+##Java 8 GC Options.
+export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+PrintReferenceGC"
+
 
 if [[ ($LOCAL_RMI_PORT -eq "0") ]]; then
     echo "no port set, using random port"
@@ -32,7 +35,5 @@ else
 	PROCESS_PROPERTIES="$PROCESS_PROPERTIES -DlocalRmiRegistryPort=$LOCAL_RMI_PORT"
 fi
 
-#echo CLASSPATH=$CLASSPATH
-#nohup java -Xmx256M -Xms64M -jar -DlocalRmiRegistryPort=$LOCAL_RMI_PORT -Dloader.path="config/" -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $TARGET_JAR >logs/stdout 2>logs/stderr & echo $! > $TARGET_PID
 echo Properties: $PROCESS_PROPERTIES
 nohup java -cp $CLASSPATH $PROCESS_PROPERTIES $TARGET_JAR >logs/stdout 2>logs/stderr $TARGET_CLASS &

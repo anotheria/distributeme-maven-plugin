@@ -8,7 +8,8 @@ source ../environment.sh
 echo Environment: $CONFIGUREME_ENVIRONMENT
 
 #create classpath, first localconf, then service specific conf, then conf, after this add all jars in locallib, then lib.
-CLASSPATH="localconf:conf/$SERVICE_NAME:conf"
+#CLASSPATH="localconf:conf/$SERVICE_NAME:conf" <-- removed service specific conf for testing
+#CLASSPATH="localconf:conf"
 for i in $( ls locallib/); do
 	CLASSPATH="$CLASSPATH:locallib/$i"
 done

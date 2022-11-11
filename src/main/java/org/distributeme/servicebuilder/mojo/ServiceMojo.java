@@ -44,6 +44,9 @@ public class ServiceMojo extends AbstractMojo {
 	private String outputDirectory = "distribution";
 
 	@Parameter
+	private String dockerOutputDirectory = "docker";
+
+	@Parameter
 	private String binDirectoryName = "bin";
 	private String libDirectoryName = "lib";
 	private String confDirectoryName = "conf";
@@ -58,7 +61,7 @@ public class ServiceMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		getLog().info( "Hello, world." );
+		getLog().info( "Building distributeme-based services." );
 
 		if (definitionsFile == null){
 			getLog().info("Definition file is null");
@@ -108,7 +111,32 @@ public class ServiceMojo extends AbstractMojo {
 			throw new MojoExecutionException("Can't create common directories", ex);
 		}
 
+		try {
+			generateDocker(list);
+		}catch(IOException e){
+			throw new MojoExecutionException("Can't create docker directories and content", e);
+		}
 
+	}
+
+	private void generateDocker(ArrayList<ServiceEntry> services) throws IOException{
+		getLog().info("Generating docker files");
+		String target = "target/"+dockerOutputDirectory+"/";
+		File targetDirFile = new File(target);
+		if (!targetDirFile.exists()){
+			targetDirFile.mkdirs();
+		}
+
+		String containerDir = target+"service/";
+		File containerDirFile = new File(containerDir); containerDirFile.mkdirs();
+
+		writeOutScript(containerDirFile, "docker/start.sh", "start.sh");
+		writeOutScript(containerDirFile, "docker/Dockerfile", "Dockerfile");
+		writeOutScript(containerDirFile, "docker/.profile", ".profile");
+		writeOutScript(containerDirFile, "docker/java.policy", "java.policy");
+
+		File lib = new File(containerDir + libDirectoryName); lib.mkdirs();
+		File conf = new File(containerDir + confDirectoryName); conf.mkdirs();
 
 	}
 
@@ -306,8 +334,12 @@ public class ServiceMojo extends AbstractMojo {
 	}
 
 	protected void writeOutScript(File targetDirectory, String filename) throws IOException{
+		writeOutScript(targetDirectory, filename, filename);
+	}
+
+	protected void writeOutScript(File targetDirectory, String filename, String outputFileName) throws IOException{
 		InputStream fIn = ServiceMojo.class.getResourceAsStream("/"+filename);
-		File file = new File(targetDirectory.getAbsolutePath()+"/"+filename);
+		File file = new File(targetDirectory.getAbsolutePath()+"/"+outputFileName);
 		FileOutputStream fOut = new FileOutputStream(file);
 		int c = -1;
 		while ( (c = fIn.read()) != -1 )

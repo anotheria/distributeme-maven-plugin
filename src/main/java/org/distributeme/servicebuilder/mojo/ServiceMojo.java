@@ -152,8 +152,9 @@ public class ServiceMojo extends AbstractMojo {
 			FileOutputStream fOutStartFile = new FileOutputStream(startFile);
 			fOutStartFile.write("#!/bin/bash\n".getBytes());
 			fOutStartFile.write("source environment.sh\n".getBytes());
-			fOutStartFile.write(("docker run --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
-					" tcl-service"//container - name we must configure yet.
+			fOutStartFile.write(("docker run --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT "+
+					" --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
+					" --name "+service.getName()+" tcl-service"//container - name we must configure yet.
 
 				+"\n").getBytes());
 			fOutStartFile.close();

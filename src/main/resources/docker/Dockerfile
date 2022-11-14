@@ -25,6 +25,7 @@ ENV SHINIT .profile
 
 # Run app.py when the container launches
 RUN apk add vim
+RUN apk add busybox-extras
 # CMD ["source", "/root/.profile"]
 # CMD ["./start-registry.sh"]
 # CMD ["python", "app.py"]

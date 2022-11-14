@@ -128,7 +128,9 @@ public class ServiceMojo extends AbstractMojo {
 		}
 
 		String containerDir = target+"service/";
+		String scriptsDir = target+"scripts/";
 		File containerDirFile = new File(containerDir); containerDirFile.mkdirs();
+		File scriptsDirFile = new File(scriptsDir); scriptsDirFile.mkdirs();
 
 		writeOutScript(containerDirFile, "docker/start.sh", "start.sh");
 		writeOutScript(containerDirFile, "docker/Dockerfile", "Dockerfile");
@@ -137,6 +139,22 @@ public class ServiceMojo extends AbstractMojo {
 
 		File lib = new File(containerDir + libDirectoryName); lib.mkdirs();
 		File conf = new File(containerDir + confDirectoryName); conf.mkdirs();
+
+		for (ServiceEntry service : services){
+			File envFile = new File(scriptsDir + service.getName() + ".env");
+			FileOutputStream fOutEnvFile = new FileOutputStream(envFile);
+			fOutEnvFile.write(("SERVICE_CLASS="+service.getStartClass()+"\n").getBytes());
+			fOutEnvFile.write(("SERVICE_PORT="+service.getRmiPort()+"\n").getBytes());
+			fOutEnvFile.write(("JVM_OPTIONS="+service.getJvmOptions()+"\n").getBytes());
+			fOutEnvFile.close();
+
+			File startFile = new File(scriptsDir + service.getName() + ".sh");
+			FileOutputStream fOutStartFile = new FileOutputStream(startFile);
+			fOutStartFile.write(("docker run --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
+					"tcl-service"//container - name we must configure yet.
+
+				+"\n").getBytes());
+		}
 
 	}
 

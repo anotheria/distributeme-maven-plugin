@@ -16,8 +16,9 @@ echo "ServiceClass (SERVICE_CLASS): $SERVICE_CLASS"
 echo "Service Registration IP: (SERVICE_REGISTRATION_IP): $SERVICE_REGISTRATION_IP"
 echo "ServicePort (SERVICE_PORT): $SERVICE_PORT"
 echo "Starting service $SERVICE_CLASS running at $SERVICE_REGISTRATION_IP:$SERVICE_PORT"
+echo "ConfigureMe environment: $CONFIGUREME_ENVIRONMENT"
 OPTIONS="-DserviceBindingPort=$SERVICE_PORT -DlocalRmiRegistryPort=$SERVICE_PORT "
 OPTIONS="$OPTIONS -Dcom.sun.management.jmxremote.host=$SERVICE_REGISTRATION_IP -Djava.rmi.server.logCalls=true -Djava.rmi.server.hostname=$SERVICE_REGISTRATION_IP"
 OPTIONS="$OPTIONS -DregistrationHostName=$SERVICE_REGISTRATION_IP"
 echo Options: $OPTIONS
-java -Xmx256M -Xms64M $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=test $SERVICE_CLASS
+java -Xmx256M -Xms64M $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $SERVICE_CLASS

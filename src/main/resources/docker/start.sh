@@ -6,11 +6,12 @@ for i in $( ls lib/); do
 	CLASSPATH="$CLASSPATH:lib/$i"
 done
 
-if [ "$JVM_OPTIONS" = "none" ]; then
+if [ "$JVM_OPTIONS" = "null" ]; then
     echo "no JVM Options set, using standard memory options "
     JVM_OPTIONS="-Xmx256M -Xms64M"
 fi
 
+#TODO CUSTOMIZE THIS.
 export GOOGLE_APPLICATION_CREDENTIALS=/app/conf/tcl-lounge-2611c844b0b6.json
 
 echo CLASSPATH: $CLASSPATH
@@ -22,7 +23,12 @@ echo "ConfigureMe environment: $CONFIGUREME_ENVIRONMENT"
 OPTIONS="-DserviceBindingPort=$SERVICE_PORT -DlocalRmiRegistryPort=$SERVICE_PORT "
 OPTIONS="$OPTIONS -Dcom.sun.management.jmxremote.host=$SERVICE_REGISTRATION_IP -Djava.rmi.server.logCalls=true -Djava.rmi.server.hostname=$SERVICE_REGISTRATION_IP"
 OPTIONS="$OPTIONS -DregistrationHostName=$SERVICE_REGISTRATION_IP"
+#add gc logging
+OPTIONS="$OPTIONS -XX:+DisableExplicitGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:logs/gc.log"
+##Java 8 GC Options.
+OPTIONS="$OPTIONS -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+PrintReferenceGC"
+
 
 echo Options: $OPTIONS
 echo Command: java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $SERVICE_CLASS
-java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $SERVICE_CLASS
+java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT >logs/stdout 2>logs/stderr $SERVICE_CLASS

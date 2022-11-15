@@ -154,6 +154,7 @@ public class ServiceMojo extends AbstractMojo {
 			fOutStartFile.write("source environment.sh\n".getBytes());
 			fOutStartFile.write(("docker run --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT "+
 					" -v `pwd`/logs-"+service.getName()+":/app/logs "+
+					" --cidfile "+service.getName()+".cid "+
 					" --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
 					" --name "+service.getName()+" tcl-service"//container - name we must configure yet.
 

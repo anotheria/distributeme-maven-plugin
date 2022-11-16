@@ -7,6 +7,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import net.anotheria.util.IOUtils;
+import net.anotheria.util.StringUtils;
+import net.sf.saxon.trans.SymbolicName;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -41,6 +43,9 @@ public class ServiceMojo extends AbstractMojo {
 	private File definitionsFile;
 
 	@Parameter
+	private String dockerImageName;
+
+	@Parameter
 	private String outputDirectory = "distribution";
 
 	@Parameter
@@ -53,6 +58,7 @@ public class ServiceMojo extends AbstractMojo {
 	private String logDirectoryName = "logs";
 	private String locallibDirectoryName = "locallib";
 	private String localconfDirectoryName = "localconf";
+
 	@Parameter
 	private String pathToEnvironmentSh;
 
@@ -106,15 +112,18 @@ public class ServiceMojo extends AbstractMojo {
 
 		//generate generic start script for all services.
 		try{
-			generateCommonPart(list);
+			generateCommonPart();
 		}catch(IOException ex){
 			throw new MojoExecutionException("Can't create common directories", ex);
 		}
 
-		try {
-			generateDocker(list);
-		}catch(IOException e){
-			throw new MojoExecutionException("Can't create docker directories and content", e);
+		//generate generic scripts for docker service instances.
+		if (!StringUtils.isEmpty(dockerImageName)) {
+			try {
+				generateDocker(list);
+			}catch(IOException e){
+				throw new MojoExecutionException("Can't create docker directories and content", e);
+			}
 		}
 
 	}
@@ -141,29 +150,52 @@ public class ServiceMojo extends AbstractMojo {
 		File conf = new File(containerDir + confDirectoryName); conf.mkdirs();
 
 		for (ServiceEntry service : services){
-			File envFile = new File(scriptsDir + service.getName() + ".env");
+
+			String scriptsContainerDir = scriptsDir + service.getName() + "/";
+			new File(scriptsContainerDir).mkdirs();
+			new File(scriptsContainerDir + "logs").mkdirs();
+
+			File envFile = new File(scriptsContainerDir + service.getName() + ".env");
 			FileOutputStream fOutEnvFile = new FileOutputStream(envFile);
 			fOutEnvFile.write(("SERVICE_CLASS="+service.getStartClass()+"\n").getBytes());
 			fOutEnvFile.write(("SERVICE_PORT="+service.getRmiPort()+"\n").getBytes());
 			fOutEnvFile.write(("JVM_OPTIONS="+service.getJvmOptions()+"\n").getBytes());
+			fOutEnvFile.write(("GOOGLE_APPLICATION_CREDENTIALS_FILE=" + service.getGoogleApplicationCredentialsFile() + "\n").getBytes());
 			fOutEnvFile.close();
 
-			File startFile = new File(scriptsDir + service.getName() + ".sh");
+			File startFile = new File(scriptsContainerDir + "start_container.sh");
 			FileOutputStream fOutStartFile = new FileOutputStream(startFile);
 			fOutStartFile.write("#!/bin/bash\n".getBytes());
-			fOutStartFile.write("source environment.sh\n".getBytes());
-			fOutStartFile.write(("docker run -d --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT "+
-					" -v `pwd`/logs-"+service.getName()+":/app/logs "+
-					" -v `pwd`/cms-content/content:/app/cms-content/content "+
+			fOutStartFile.write("source ../environment.sh\n".getBytes());
+			fOutStartFile.write(("docker run -d --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT " +
+					" -v `pwd`/logs:/app/logs " +
+					" -v $ASG_CONTENT_PATH:/app/cms-content/content " +
+					" -v $ASG_BOXES_PATH:/app/cms-content/secure-boxes " +
 					" --cidfile "+service.getName()+".cid "+
 					" --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
-					" --name "+service.getName()+" tcl-service"//container - name we must configure yet.
+					" --name "+service.getName()+" " + dockerImageName
 
 				+"\n").getBytes());
 			fOutStartFile.close();
 			startFile.setExecutable(true);
+
+			File stopFile = new File(scriptsContainerDir + "stop_container.sh");
+			FileOutputStream fOutStopFile = new FileOutputStream(stopFile);
+			fOutStopFile.write("#!/bin/bash\n".getBytes());
+			fOutStopFile.write(("CIDFILE=" + service.getName() + ".cid\n").getBytes());
+			fOutStopFile.write("echo stopping $CIDFILE - `cat $CIDFILE`\n".getBytes());
+			fOutStopFile.write("docker container stop `cat $CIDFILE`\n".getBytes());
+			fOutStopFile.write("docker container rm `cat $CIDFILE`\n".getBytes());
+			fOutStopFile.write(("rm " + service.getName() + ".cid\n").getBytes());
+			fOutStopFile.write(("echo stopped " + service.getName() + "\n").getBytes());
+
+
+			fOutStopFile.close();
+			stopFile.setExecutable(true);
 		}
 
+		createSymbolicLinkForEnvironment(scriptsDir);
+		writeOutGenericScripts(scriptsDirFile, "./start_container.sh", "./stop_container.sh");
 	}
 
 	public File getDefinitionsFile() {
@@ -174,25 +206,25 @@ public class ServiceMojo extends AbstractMojo {
 		this.definitionsFile = definitionsFile;
 	}
 
-	protected void generateCommonPart(List<ServiceEntry> entries) throws IOException{
-		String target = "target/"+outputDirectory+"/";
+	protected void generateCommonPart() throws IOException{
+		//common part for all services scripts
+		File bin = new File("target/"+outputDirectory+"/" + binDirectoryName); bin.mkdirs();
+		File lib = new File("target/"+outputDirectory+"/" + libDirectoryName); lib.mkdirs();
+		File conf = new File("target/"+outputDirectory+"/" + confDirectoryName); conf.mkdirs();
+		createSymbolicLinkForEnvironment("target/"+outputDirectory+"/");
+		writeOutScript(bin, "start.sh");
+		writeOutScript(bin, "stop.sh");
+		writeOutGenericScripts(bin, "bin/start_service.sh", "bin/stop_service.sh");
+	}
 
-		File bin = new File(target + binDirectoryName); bin.mkdirs();
-		File lib = new File(target + libDirectoryName); lib.mkdirs();
-		File conf = new File(target + confDirectoryName); conf.mkdirs();
-
-		//link to environment sh.
+	private void createSymbolicLinkForEnvironment(String targetDir) throws IOException {
 		Path envLinkTarget = Paths.get(pathToEnvironmentSh);
-		Path envLinksource = Paths.get(target+"environment.sh");
+		Path envLinksource = Paths.get(targetDir + "environment.sh");
 		try {
 			Files.createSymbolicLink(envLinksource, envLinkTarget);
 		}catch(FileAlreadyExistsException toignore){
 			getLog().info("symlink "+envLinksource+" already exists, skipping");
 		}
-
-		writeOutGenericScripts(bin, entries);
-
-
 	}
 
 	protected void generateService(ServiceEntry entry) throws IOException{
@@ -254,17 +286,7 @@ public class ServiceMojo extends AbstractMojo {
 
 	}
 
-	protected void writeOutGenericScripts(File targetDirectory, List<ServiceEntry> serviceEntries) throws IOException{
-		writeOutScript(targetDirectory, "start.sh");
-		writeOutScript(targetDirectory, "stop.sh");
-
-		//create start all script
-		String serviceList = "";
-		for (ServiceEntry entry : serviceEntries){
-			//if (entry.isAutostart()){
-			//	serviceList+= entry.getName()+" ";
-			//}
-		}
+	protected void writeOutGenericScripts(File targetDirectory, String startAction, String stopAction) throws IOException{
 
 		File startAllFile = new File(targetDirectory.getAbsolutePath()+"/"+"start_all.sh");
 		FileOutputStream startAll = new FileOutputStream(startAllFile);
@@ -304,7 +326,7 @@ public class ServiceMojo extends AbstractMojo {
 		writeLine(startAll, "for i in $SERVICES; do");
 		writeLine(startAll, "\techo starting service $i");
 		writeLine(startAll, "\tcd $i");
-		writeLine(startAll, "\tbin/start_service.sh");
+		writeLine(startAll, "\t" + startAction);
 		writeLine(startAll, "\tcd ..");
 		writeLine(startAll, "done");
 		startAll.close();
@@ -347,12 +369,11 @@ public class ServiceMojo extends AbstractMojo {
 		writeLine(stopAll,"for i in $SERVICES; do");
 		writeLine(stopAll,"\techo stoping service $i");
 		writeLine(stopAll,"\tcd $i");
-		writeLine(stopAll,"\tbin/stop_service.sh");
+		writeLine(stopAll,"\t" + stopAction);
 		writeLine(stopAll,"\tcd ..");
 		writeLine(stopAll,"done");
 		stopAll.close();
 		stopAllFile.setExecutable(true);
-
 	}
 
 	private void writeLine(FileOutputStream fOut, String line) throws IOException{

@@ -29,6 +29,12 @@ public class ServiceEntry {
 	 */
 	private String jvmOptions;
 
+	/**
+	 * Google Application Credentials file for service account.
+	 */
+	private String googleApplicationCredentialsFile;
+
+
 	private List<String> profiles = new ArrayList<>();
 
 
@@ -70,6 +76,14 @@ public class ServiceEntry {
 
 	public void setJvmOptions(String jvmOptions) {
 		this.jvmOptions = jvmOptions;
+	}
+
+	public String getGoogleApplicationCredentialsFile() {
+		return googleApplicationCredentialsFile;
+	}
+
+	public void setGoogleApplicationCredentialsFile(String googleApplicationCredentialsFile) {
+		this.googleApplicationCredentialsFile = googleApplicationCredentialsFile;
 	}
 
 	@Override

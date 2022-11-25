@@ -169,8 +169,7 @@ public class ServiceMojo extends AbstractMojo {
 			fOutStartFile.write("source ../environment.sh\n".getBytes());
 			fOutStartFile.write(("docker run -d --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT " +
 					" -v `pwd`/logs:/app/logs " +
-					" -v $ASG_CONTENT_PATH:/app/cms-content/content " +
-					" -v $ASG_BOXES_PATH:/app/cms-content/secure-boxes " +
+					" $DOCKER_CONTAINER_OPTS " +
 					" --cidfile "+service.getName()+".cid "+
 					" --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
 					" --name "+service.getName()+" " + dockerImageName

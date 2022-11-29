@@ -62,6 +62,9 @@ public class ServiceMojo extends AbstractMojo {
 	@Parameter
 	private String pathToEnvironmentSh;
 
+	@Parameter
+	private String dockerRepository;
+
 	private HashMap<String,List<String>> knownProfiles = new HashMap<>();
 
 
@@ -172,7 +175,7 @@ public class ServiceMojo extends AbstractMojo {
 					" $DOCKER_CONTAINER_OPTS " +
 					" --cidfile "+service.getName()+".cid "+
 					" --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
-					" --name "+service.getName()+" " + dockerImageName
+					" --name "+service.getName()+" " + (StringUtils.isEmpty(dockerRepository) ? "" : (dockerRepository + "/")) + dockerImageName
 
 				+"\n").getBytes());
 			fOutStartFile.close();

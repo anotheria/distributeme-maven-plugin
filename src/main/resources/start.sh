@@ -23,11 +23,19 @@ if [ "$JVM_OPTIONS" = "none" ]; then
     JVM_OPTIONS="-Xmx256M -Xms64M"
 fi
 
-export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $JVM_OPTIONS"
-export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+DisableExplicitGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:logs/gc.log"
-##Java 8 GC Options.
-export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+PrintReferenceGC"
+JAVA_BIN=${JAVA_HOME}/bin/java
+JAVA_VER=$(${JAVA_BIN} -version 2>&1 | sed -n ';s/.* version "\(.*\)\.\(.*\)\..*".*/\1\2/p;')
 
+export PROCESS_PROPERTIES="-Dpidfile=$TARGET_PID -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $JVM_OPTIONS"
+export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+DisableExplicitGC -Xloggc:logs/gc.log"
+
+if [ "$JAVA_VER" == "18" ]; then
+  ##Java 8 GC Options.
+  export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+PrintReferenceGC"
+else
+  ##Java 11 GC Options.
+  export PROCESS_PROPERTIES="$PROCESS_PROPERTIES -Xlog:age*=trace -Xlog:gc* -Xlog:safepoint -Xlog:ref*=debug"
+fi
 
 if [[ ($LOCAL_RMI_PORT -eq "0") ]]; then
     echo "no port set, using random port"

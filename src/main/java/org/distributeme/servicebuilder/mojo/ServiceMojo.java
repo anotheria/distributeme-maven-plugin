@@ -8,7 +8,6 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import net.anotheria.util.IOUtils;
 import net.anotheria.util.StringUtils;
-import net.sf.saxon.trans.SymbolicName;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;

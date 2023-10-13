@@ -168,13 +168,18 @@ public class ServiceMojo extends AbstractMojo {
 			File startFile = new File(scriptsContainerDir + "start_container.sh");
 			FileOutputStream fOutStartFile = new FileOutputStream(startFile);
 			fOutStartFile.write("#!/bin/bash\n".getBytes());
+			fOutStartFile.write("if [ -z \"$1\" ] || [ \"$1\" == \"null\" ]; then\n".getBytes());
+			fOutStartFile.write("	tagName=\"latest\"\n".getBytes());
+			fOutStartFile.write("else\n".getBytes());
+			fOutStartFile.write("	tagName=\"$1\"\n".getBytes());
+			fOutStartFile.write("fi\n\n".getBytes());
 			fOutStartFile.write("source ../environment.sh\n".getBytes());
 			fOutStartFile.write(("docker run -d --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT " +
 					" -v `pwd`/logs:/app/logs " +
 					" $DOCKER_CONTAINER_OPTS " +
 					" --cidfile "+service.getName()+".cid "+
 					" --env SERVICE_REGISTRATION_IP=$SERVICE_REGISTRATION_IP --env-file "+service.getName()+".env -p "+service.getRmiPort()+":"+service.getRmiPort()+
-					" --name "+service.getName()+" " + (StringUtils.isEmpty(dockerRepository) ? "" : (dockerRepository + "/")) + dockerImageName
+					" --name "+service.getName()+" " + (StringUtils.isEmpty(dockerRepository) ? "" : (dockerRepository + "/")) + dockerImageName + ":$tagName"
 
 				+"\n").getBytes());
 			fOutStartFile.close();

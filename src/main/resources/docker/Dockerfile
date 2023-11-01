@@ -1,6 +1,6 @@
 # Use an official Python runtime as a parent image
-#FROM openjdk:8-jre-alpine
-FROM openjdk:8
+#FROM openjdk:11-jre-alpine
+FROM openjdk:11
 
 # Set the working directory to /app
 WORKDIR /app
@@ -9,10 +9,10 @@ WORKDIR /app
 COPY . /app
 COPY .profile /root/
 #Copy java policy to enable MBean Registration (alpine)
-COPY java.policy /usr/lib/jvm/java-1.8-openjdk/jre/lib/security/
+COPY java.policy /usr/local/openjdk-11/lib/security/
 
-#Copy java policy to enable MBean Registration open-jdk-8
-COPY java.policy /usr/local/openjdk-8/jre/lib/security
+#Copy java policy to enable MBean Registration open-jdk-11
+COPY java.policy /usr/local/openjdk-11/conf/security
 
 
 COPY start.sh /app

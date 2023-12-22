@@ -329,10 +329,17 @@ public class ServiceMojo extends AbstractMojo {
 		writeLine(startAll, "fi");
 
 		writeLine(startAll, "");
+		writeLine(startAll, "if [ -z \"$1\" ] || [ \"$1\" == \"null\" ]; then");
+		writeLine(startAll, "	tagName=\"latest\"");
+		writeLine(startAll,"else");
+		writeLine(startAll,"	tagName=\"$1\"");
+		writeLine(startAll,"fi");
+
+		writeLine(startAll, "");
 		writeLine(startAll, "for i in $SERVICES; do");
 		writeLine(startAll, "\techo starting service $i");
 		writeLine(startAll, "\tcd $i");
-		writeLine(startAll, "\t" + startAction);
+		writeLine(startAll, "\t" + startAction + " $tagName");
 		writeLine(startAll, "\tcd ..");
 		writeLine(startAll, "done");
 		startAll.close();

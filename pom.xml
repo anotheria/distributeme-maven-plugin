@@ -9,7 +9,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.anotheria</groupId>
     <artifactId>distributeme-maven-plugin</artifactId>
-    <version>4.0.2-SNAPSHOT</version>
+    <version>4.0.2</version>
     <packaging>maven-plugin</packaging>
     <name>distributeme-maven-plugin</name>
     <description>distributeme maven plugin for generating service start scripts.</description>

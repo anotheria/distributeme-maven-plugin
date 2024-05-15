@@ -27,7 +27,7 @@ OPTIONS="$OPTIONS -DregistrationHostName=$SERVICE_REGISTRATION_IP"
 #add gc logging
 OPTIONS="$OPTIONS -Xlog:gc:file=logs/gc.log:utctime,pid,level,tags:filecount=3,filesize=100M"
 
-
+echo 0 > /proc/sys/kernel/yama/ptrace_scope
 echo Options: $OPTIONS
 echo Command: java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $SERVICE_CLASS
 java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT >logs/stdout 2>logs/stderr $SERVICE_CLASS

@@ -174,7 +174,7 @@ public class ServiceMojo extends AbstractMojo {
 			fOutStartFile.write("	tagName=\"$1\"\n".getBytes());
 			fOutStartFile.write("fi\n\n".getBytes());
 			fOutStartFile.write("source ../environment.sh\n".getBytes());
-			fOutStartFile.write(("docker run -d --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT " +
+			fOutStartFile.write(("docker run -d --privileged --env CONFIGUREME_ENVIRONMENT=$CONFIGUREME_ENVIRONMENT " +
 					" -v `pwd`/logs:/app/logs " +
 					" $DOCKER_CONTAINER_OPTS " +
 					" --cidfile "+service.getName()+".cid "+

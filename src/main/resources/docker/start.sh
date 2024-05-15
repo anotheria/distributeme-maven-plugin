@@ -25,11 +25,9 @@ OPTIONS="-DserviceBindingPort=$SERVICE_PORT -DlocalRmiRegistryPort=$SERVICE_PORT
 OPTIONS="$OPTIONS -Dcom.sun.management.jmxremote.host=$SERVICE_REGISTRATION_IP -Djava.rmi.server.hostname=$SERVICE_REGISTRATION_IP"
 OPTIONS="$OPTIONS -DregistrationHostName=$SERVICE_REGISTRATION_IP"
 #add gc logging
-OPTIONS="$OPTIONS -XX:+DisableExplicitGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:logs/gc.log"
-##Java 8 GC Options.
-OPTIONS="$OPTIONS -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+PrintReferenceGC"
+OPTIONS="$OPTIONS -Xlog:gc:file=logs/gc.log:utctime,pid,level,tags:filecount=3,filesize=100M"
 
-
+echo 0 > /proc/sys/kernel/yama/ptrace_scope
 echo Options: $OPTIONS
 echo Command: java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT $SERVICE_CLASS
 java $JVM_OPTIONS $OPTIONS -classpath $CLASSPATH -Dconfigureme.defaultEnvironment=$CONFIGUREME_ENVIRONMENT >logs/stdout 2>logs/stderr $SERVICE_CLASS
